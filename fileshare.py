@@ -1,5 +1,12 @@
 from PyQt4 import QtCore, QtGui
 import sys
+import socket
+import SimpleHTTPServer
+import SocketServer
+import os
+import threading
+from BaseHTTPServer import HTTPServer
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 try:
 	_fromUtf8 = QtCore.QString.fromUtf8
@@ -25,6 +32,7 @@ class Ui_Fshare(QtGui.QWidget):
 		icon = QtGui.QIcon()
 		icon.addPixmap(QtGui.QPixmap(_fromUtf8("../lrnqt/2.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 		Fshare.setWindowIcon(icon)
+		self.flag = False
 		self.etFolder = QtGui.QTextEdit(Fshare)
 		self.etFolder.setGeometry(QtCore.QRect(150, 100, 431, 31))
 		self.etFolder.setObjectName(_fromUtf8("etFolder"))
@@ -74,6 +82,63 @@ class Ui_Fshare(QtGui.QWidget):
 		self.lShareFolder.setText(_translate("Fshare", "folder to share", None))
 		self.lPort.setText(_translate("Fshare", "port", None))
 		self.btnShare.setText(_translate("Fshare", "Start Sharing", None))
+		self.btnOpenFile.clicked.connect(self.openfile)
+		self.btnShare.clicked.connect(self.startSharing)
+		self.mserve = MyServer()
+		self.fun()
+
+	def openfile(self):
+		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', '/root/', QtGui.QFileDialog.ShowDirsOnly))
+		self.etFolder.setText(location)
+
+	def fun(self):
+		self.mserve = MyServer()
+
+	def startSharing(self):
+		if self.flag:
+			self.flag = False
+			self.mserve.serverStop()
+			del self.mserve
+			self.fun()
+			self.btnShare.setText("Start Sharing")
+			return
+		self.flag = True
+		self.lPort.setStyleSheet('color : black')
+		port = str(self.etPort.toPlainText())
+		location = str(self.etFolder.toPlainText())
+		try:
+			nport = int(port)
+		except Exception:
+			self.lPort.setStyleSheet('color : red')
+			pass
+		
+		self.mserve.serverStart(nport,location)
+		self.btnShare.setText("Stop Sharing")
+		#thread.start_new_thread(self.mserve.serverStart,(nport,location))
+		#ServerStart(nport,location)
+
+class MyServer:
+	def __init__(self):
+		self.port = 8080
+	def __exit__(self, *err	):
+        	self.close()
+		
+	def serverStart(self,port, location):
+		self.port = port
+		self.location = location
+		class MyTCPServer(SocketServer.TCPServer):
+			def server_bind(self):
+				self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				self.socket.bind(self.server_address)
+		self.Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+		self.server = MyTCPServer(("", self.port), self.Handler)
+		os.chdir(self.location)
+		thread = threading.Thread(target = self.server.serve_forever)
+		thread.deamon = True
+		thread.start()
+		
+	def serverStop(self):
+		self.server.shutdown()
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)

@@ -85,7 +85,7 @@ class Ui_Fshare(QtGui.QWidget):
 		self.btnOpenFile.clicked.connect(self.openfile)
 		self.btnShare.clicked.connect(self.startSharing)
 		self.mserve = MyServer()
-		self.fun()
+		self.initiate()
 		self.logs = ""
 		self.etPort.insertPlainText("8080")
 
@@ -94,7 +94,7 @@ class Ui_Fshare(QtGui.QWidget):
         	if os == 'Linux':
             		self.location = "/"            
         	elif os == 'Windows':
-            		self.location = "C:\\"   
+            		self.location = "C:\\"
         	else:
             		self.location = ""
 	
@@ -103,15 +103,22 @@ class Ui_Fshare(QtGui.QWidget):
 		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', self.location , QtGui.QFileDialog.ShowDirsOnly))
 		self.etFolder.setText(location)
 
-	def fun(self):
+	def initiate(self):
 		self.mserve = MyServer()
 
 	def startSharing(self):
+		port = str(self.etPort.toPlainText())
+		try:
+                        nport = int(port)
+                except Exception:
+                        self.lPort.setStyleSheet('color : red')
+			return
+			pass
 		if self.flag:
 			self.flag = False
 			self.mserve.serverStop()
 			del self.mserve
-			self.fun()
+			self.initiate()
 			self.btnShare.setText("Start Sharing")
 			self.logs = "Sharing Stopped \n"
 			self.etLogs.insertPlainText(self.logs)
@@ -121,12 +128,6 @@ class Ui_Fshare(QtGui.QWidget):
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
 		self.location = str(self.etFolder.toPlainText())
-		try:
-			nport = int(port)
-		except Exception:
-			self.lPort.setStyleSheet('color : red')
-			pass
-			
 		self.mserve.serverStart(nport,self.location)
 		self.logs = "Sharing location : "+ self.location +"\nIP Sharing on : " + self.getIp() + "\n"
 		self.etLogs.insertPlainText(self.logs)

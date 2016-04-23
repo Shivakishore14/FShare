@@ -108,6 +108,7 @@ class Ui_Fshare(QtGui.QWidget):
 
 	def startSharing(self):
 		port = str(self.etPort.toPlainText())
+		nport = 0
 		try:
                         nport = int(port)
                 except Exception:
@@ -129,8 +130,10 @@ class Ui_Fshare(QtGui.QWidget):
 		port = str(self.etPort.toPlainText())
 		self.location = str(self.etFolder.toPlainText())
 		self.mserve.serverStart(nport,self.location)
-		self.logs = "Sharing location : "+ self.location +"\nIP Sharing on : " + self.getIp() + "\n"
+		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
 		self.etLogs.insertPlainText(self.logs)
+		if nport < 1025:
+			self.etLogs.insertPlainText("Use port greater than 1024 for proper working\n")
 		self.etLogs.moveCursor(QtGui.QTextCursor.End)
 		self.btnShare.setText("Stop Sharing")
 		#thread.start_new_thread(self.mserve.serverStart,(nport,self.location))

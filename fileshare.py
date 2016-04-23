@@ -1,11 +1,11 @@
 from PyQt4 import QtCore, QtGui
 import sys
+import platform
 import socket
 import SimpleHTTPServer
 import SocketServer
 import os
 import threading
-from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 try:
@@ -86,9 +86,21 @@ class Ui_Fshare(QtGui.QWidget):
 		self.btnShare.clicked.connect(self.startSharing)
 		self.mserve = MyServer()
 		self.fun()
+		self.logs = ""
+		self.etPort.insertPlainText("8080")
 
+	def getLocation(self):
+		os = platform.system()
+        	if os == 'Linux':
+            		self.location = "/"            
+        	elif os == 'Windows':
+            		self.location = "C:\\"   
+        	else:
+            		self.location = ""
+	
 	def openfile(self):
-		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', '/root/', QtGui.QFileDialog.ShowDirsOnly))
+		self.getLocation()
+		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', self.location , QtGui.QFileDialog.ShowDirsOnly))
 		self.etFolder.setText(location)
 
 	def fun(self):
@@ -101,21 +113,33 @@ class Ui_Fshare(QtGui.QWidget):
 			del self.mserve
 			self.fun()
 			self.btnShare.setText("Start Sharing")
+			self.logs = "Sharing Stopped \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
 			return
 		self.flag = True
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
-		location = str(self.etFolder.toPlainText())
+		self.location = str(self.etFolder.toPlainText())
 		try:
 			nport = int(port)
 		except Exception:
 			self.lPort.setStyleSheet('color : red')
 			pass
-		
-		self.mserve.serverStart(nport,location)
+			
+		self.mserve.serverStart(nport,self.location)
+		self.logs = "Sharing location : "+ self.location +"\nIP Sharing on : " + self.getIp() + "\n"
+		self.etLogs.insertPlainText(self.logs)
+		self.etLogs.moveCursor(QtGui.QTextCursor.End)
 		self.btnShare.setText("Stop Sharing")
-		#thread.start_new_thread(self.mserve.serverStart,(nport,location))
-		#ServerStart(nport,location)
+		#thread.start_new_thread(self.mserve.serverStart,(nport,self.location))
+		#ServerStart(nport,self.location)
+
+	def getIp(self):
+		ip = socket.gethostbyname(socket.gethostname())
+		if ip is '127.0.0.1':
+			ip = socket.gethostbyname(socket.getfqdn())
+		return ip
 
 class MyServer:
 	def __init__(self):

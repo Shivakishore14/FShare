@@ -1,5 +1,12 @@
 from PyQt4 import QtCore, QtGui
 import sys
+import platform
+import socket
+import SimpleHTTPServer
+import SocketServer
+import os
+import threading
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 try:
 	_fromUtf8 = QtCore.QString.fromUtf8
@@ -22,6 +29,7 @@ class Ui_Form(QtGui.QWidget):
 	def setupUi(self, Form):
 		Form.setObjectName(_fromUtf8("Fshare"))
 		Form.resize(651, 343)
+		self.flag = False
 		self.horizontalLayout = QtGui.QHBoxLayout(Form)
 		self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
 		self.gridLayout = QtGui.QGridLayout()
@@ -31,14 +39,14 @@ class Ui_Form(QtGui.QWidget):
 		self.horizontalLayoutPorts.setObjectName(_fromUtf8("horizontalLayoutPorts"))
 		spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
 		self.horizontalLayoutPorts.addItem(spacerItem)
-		self.label = QtGui.QLabel(Form)
-		self.label.setMaximumSize(QtCore.QSize(100, 25))
-		self.label.setObjectName(_fromUtf8("label"))
-		self.horizontalLayoutPorts.addWidget(self.label)
-		self.textEdit_2 = QtGui.QTextEdit(Form)
-		self.textEdit_2.setMaximumSize(QtCore.QSize(100, 25))
-		self.textEdit_2.setObjectName(_fromUtf8("textEdit_2"))
-		self.horizontalLayoutPorts.addWidget(self.textEdit_2)
+		self.lPort = QtGui.QLabel(Form)
+		self.lPort.setMaximumSize(QtCore.QSize(100, 25))
+		self.lPort.setObjectName(_fromUtf8("label"))
+		self.horizontalLayoutPorts.addWidget(self.lPort)
+		self.etPort = QtGui.QTextEdit(Form)
+		self.etPort.setMaximumSize(QtCore.QSize(100, 25))
+		self.etPort.setObjectName(_fromUtf8("etPort"))
+		self.horizontalLayoutPorts.addWidget(self.etPort)
 		spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
 		self.horizontalLayoutPorts.addItem(spacerItem1)
 		self.gridLayout.addLayout(self.horizontalLayoutPorts, 7, 0, 1, 1)
@@ -64,31 +72,31 @@ class Ui_Form(QtGui.QWidget):
 		self.btnShare.setObjectName(_fromUtf8("btnShare"))
 		self.layoutSubmit.addWidget(self.btnShare)
 		self.gridLayout.addLayout(self.layoutSubmit, 15, 0, 1, 1)
-		self.labelTitle = QtGui.QLabel(Form)
-		self.labelTitle.setEnabled(True)
+		self.lTitle = QtGui.QLabel(Form)
+		self.lTitle.setEnabled(True)
 		sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Maximum)
 		sizePolicy.setHorizontalStretch(0)
 		sizePolicy.setVerticalStretch(0)
-		sizePolicy.setHeightForWidth(self.labelTitle.sizePolicy().hasHeightForWidth())
-		self.labelTitle.setSizePolicy(sizePolicy)
-		self.labelTitle.setMaximumSize(QtCore.QSize(16777215, 120))
+		sizePolicy.setHeightForWidth(self.lTitle.sizePolicy().hasHeightForWidth())
+		self.lTitle.setSizePolicy(sizePolicy)
+		self.lTitle.setMaximumSize(QtCore.QSize(16777215, 120))
 		font = QtGui.QFont()
 		font.setFamily(_fromUtf8("Monospace"))
 		font.setPointSize(24)
 		font.setBold(True)
 		font.setItalic(False)
 		font.setWeight(75)
-		self.labelTitle.setFont(font)
-		self.labelTitle.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
-		self.labelTitle.setObjectName(_fromUtf8("labelTitle"))
-		self.gridLayout.addWidget(self.labelTitle, 0, 0, 1, 1)
+		self.lTitle.setFont(font)
+		self.lTitle.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
+		self.lTitle.setObjectName(_fromUtf8("lTitle"))
+		self.gridLayout.addWidget(self.lTitle, 0, 0, 1, 1)
 		self.horizontalLayoutSelect = QtGui.QHBoxLayout()
 		self.horizontalLayoutSelect.setObjectName(_fromUtf8("horizontalLayoutSelect"))
 		spacerItem3 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
 		self.horizontalLayoutSelect.addItem(spacerItem3)
-		self.labelShareChooser = QtGui.QLabel(Form)
-		self.labelShareChooser.setObjectName(_fromUtf8("labelShareChooser"))
-		self.horizontalLayoutSelect.addWidget(self.labelShareChooser)
+		self.lShareChooser = QtGui.QLabel(Form)
+		self.lShareChooser.setObjectName(_fromUtf8("lShareChooser"))
+		self.horizontalLayoutSelect.addWidget(self.lShareChooser)
 		self.btnRadioHttp = QtGui.QRadioButton(Form)
 		self.btnRadioHttp.setObjectName(_fromUtf8("btnRadioHttp"))
 		self.horizontalLayoutSelect.addWidget(self.btnRadioHttp)
@@ -104,18 +112,18 @@ class Ui_Form(QtGui.QWidget):
 		self.horizontalLayoutFolderShare.setSizeConstraint(QtGui.QLayout.SetFixedSize)
 		self.horizontalLayoutFolderShare.setSpacing(6)
 		self.horizontalLayoutFolderShare.setObjectName(_fromUtf8("horizontalLayoutFolderShare"))
-		self.label_2 = QtGui.QLabel(Form)
-		self.label_2.setMaximumSize(QtCore.QSize(16777215, 25))
-		self.label_2.setObjectName(_fromUtf8("label_2"))
-		self.horizontalLayoutFolderShare.addWidget(self.label_2)
-		self.textEdit = QtGui.QTextEdit(Form)
-		self.textEdit.setMaximumSize(QtCore.QSize(16777215, 25))
-		self.textEdit.setObjectName(_fromUtf8("textEdit"))
-		self.horizontalLayoutFolderShare.addWidget(self.textEdit)
-		self.toolButton = QtGui.QToolButton(Form)
-		self.toolButton.setMaximumSize(QtCore.QSize(16777215, 25))
-		self.toolButton.setObjectName(_fromUtf8("toolButton"))
-		self.horizontalLayoutFolderShare.addWidget(self.toolButton)
+		self.lPort_2 = QtGui.QLabel(Form)
+		self.lPort_2.setMaximumSize(QtCore.QSize(16777215, 25))
+		self.lPort_2.setObjectName(_fromUtf8("label_2"))
+		self.horizontalLayoutFolderShare.addWidget(self.lPort_2)
+		self.etFolder = QtGui.QTextEdit(Form)
+		self.etFolder.setMaximumSize(QtCore.QSize(16777215, 25))
+		self.etFolder.setObjectName(_fromUtf8("textEdit"))
+		self.horizontalLayoutFolderShare.addWidget(self.etFolder)
+		self.btnOpenFile = QtGui.QToolButton(Form)
+		self.btnOpenFile.setMaximumSize(QtCore.QSize(16777215, 25))
+		self.btnOpenFile.setObjectName(_fromUtf8("btnOpenFile"))
+		self.horizontalLayoutFolderShare.addWidget(self.btnOpenFile)
 		self.gridLayout.addLayout(self.horizontalLayoutFolderShare, 3, 0, 1, 1)
 		spacerItem6 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
 		self.gridLayout.addItem(spacerItem6, 4, 0, 1, 1)
@@ -124,15 +132,15 @@ class Ui_Form(QtGui.QWidget):
 		self.verticalLayoutLogs = QtGui.QVBoxLayout()
 		self.verticalLayoutLogs.setContentsMargins(10, -1, 10, -1)
 		self.verticalLayoutLogs.setObjectName(_fromUtf8("verticalLayoutLogs"))
-		self.textEditLogs = QtGui.QTextEdit(Form)
+		self.etLogs = QtGui.QTextEdit(Form)
 		sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Maximum)
 		sizePolicy.setHorizontalStretch(0)
 		sizePolicy.setVerticalStretch(0)
-		sizePolicy.setHeightForWidth(self.textEditLogs.sizePolicy().hasHeightForWidth())
-		self.textEditLogs.setSizePolicy(sizePolicy)
-		self.textEditLogs.setMaximumSize(QtCore.QSize(16777215, 200))
-		self.textEditLogs.setObjectName(_fromUtf8("textEditLogs"))
-		self.verticalLayoutLogs.addWidget(self.textEditLogs)
+		sizePolicy.setHeightForWidth(self.etLogs.sizePolicy().hasHeightForWidth())
+		self.etLogs.setSizePolicy(sizePolicy)
+		self.etLogs.setMaximumSize(QtCore.QSize(16777215, 200))
+		self.etLogs.setObjectName(_fromUtf8("etLogs"))
+		self.verticalLayoutLogs.addWidget(self.etLogs)
 		self.gridLayout.addLayout(self.verticalLayoutLogs, 14, 0, 1, 1)
 		spacerItem8 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
 		self.gridLayout.addItem(spacerItem8, 2, 0, 1, 1)
@@ -143,20 +151,97 @@ class Ui_Form(QtGui.QWidget):
 
 	def retranslateUi(self, Form):
 		Form.setWindowTitle(_translate("Form", "Fshare", None))
-		self.label.setText(_translate("Form", "Port : ", None))
+		self.lPort.setText(_translate("Form", "Port : ", None))
 		self.btnShare.setText(_translate("Form", "Start Sharing", None))
-		self.labelTitle.setText(_translate("Form", "F Share V1.1", None))
-		self.labelShareChooser.setText(_translate("Form", "Share over :", None))
+		self.lTitle.setText(_translate("Form", "F Share V1.1", None))
+		self.lShareChooser.setText(_translate("Form", "Share over :", None))
 		self.btnRadioHttp.setText(_translate("Form", "Http", None))
 		self.btnRadioFtp.setText(_translate("Form", "FTP", None))
-		self.label_2.setText(_translate("Form", "Folder To Share : ", None))
-		self.toolButton.setText(_translate("Form", "...", None))
+		self.lPort_2.setText(_translate("Form", "Folder To Share : ", None))
+		self.btnOpenFile.setText(_translate("Form", "...", None))
+		self.btnOpenFile.clicked.connect(self.openfile)
+		self.btnShare.clicked.connect(self.startHttpSharing)
+		self.initiate()
+		self.logs = ""
+		self.etPort.insertPlainText("8080")
 
+	def getLocation(self):
+		os = platform.system()
+        	if os == 'Linux':
+            		self.location = "/"            
+        	elif os == 'Windows':
+            		self.location = "C:\\"
+        	else:
+            		self.location = ""
+	
+	def openfile(self):
+		self.getLocation()
+		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', self.location , QtGui.QFileDialog.ShowDirsOnly))
+		self.etFolder.setText(location)
 
+	def getIp(self):
+		ip = socket.gethostbyname(socket.gethostname())
+		if ip is '127.0.0.1':
+			ip = socket.gethostbyname(socket.getfqdn())
+		return ip
 
+	def initiate(self):
+		self.mserve = MyServerHttp()
+	
 
+	def startHttpSharing(self):
+		port = str(self.etPort.toPlainText())
+		nport = 0
+		try:
+                        nport = int(port)
+                except Exception:
+                        self.lPort.setStyleSheet('color : red')
+			return
+			pass
+		if self.flag:
+			self.flag = False
+			self.mserve.serverStop()
+			del self.mserve
+			self.initiate()
+			self.btnShare.setText("Start Sharing")
+			self.logs = "Sharing Stopped \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			return
+		self.flag = True
+		self.lPort.setStyleSheet('color : black')
+		port = str(self.etPort.toPlainText())
+		self.location = str(self.etFolder.toPlainText())
+		self.mserve.serverStart(nport,self.location)
+		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+		self.etLogs.insertPlainText(self.logs)
+		if nport < 1025:
+			self.etLogs.insertPlainText("Use port greater than 1024 for proper working\n")
+		self.etLogs.moveCursor(QtGui.QTextCursor.End)
+		self.btnShare.setText("Stop Sharing")
 
-
+class MyServerHttp:
+	def __init__(self):
+		self.port = 8080
+	def __exit__(self, *err	):
+        	self.close()
+		
+	def serverStart(self,port, location):
+		self.port = port
+		self.location = location
+		class MyTCPServer(SocketServer.TCPServer):
+			def server_bind(self):
+				self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				self.socket.bind(self.server_address)
+		self.Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+		self.server = MyTCPServer(("", self.port), self.Handler)
+		os.chdir(self.location)
+		thread = threading.Thread(target = self.server.serve_forever)
+		thread.deamon = True
+		thread.start()
+		
+	def serverStop(self):
+		self.server.shutdown()
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)

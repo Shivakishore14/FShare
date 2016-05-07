@@ -7,6 +7,9 @@ import SocketServer
 import os
 import threading
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.servers import FTPServer
 
 try:
 	_fromUtf8 = QtCore.QString.fromUtf8
@@ -29,7 +32,8 @@ class Ui_Form(QtGui.QWidget):
 	def setupUi(self, Form):
 		Form.setObjectName(_fromUtf8("Fshare"))
 		Form.resize(651, 343)
-		self.flag = False
+		self.flagf = False
+		self.flagf = True
 		self.horizontalLayout = QtGui.QHBoxLayout(Form)
 		self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
 		self.gridLayout = QtGui.QGridLayout()
@@ -160,8 +164,9 @@ class Ui_Form(QtGui.QWidget):
 		self.lPort_2.setText(_translate("Form", "Folder To Share : ", None))
 		self.btnOpenFile.setText(_translate("Form", "...", None))
 		self.btnOpenFile.clicked.connect(self.openfile)
-		self.btnShare.clicked.connect(self.startHttpSharing)
-		self.initiate()
+		self.btnShare.clicked.connect(self.startFtpSharing)
+		self.initiatehttp()
+		self.initiateftp()
 		self.logs = ""
 		self.etPort.insertPlainText("8080")
 
@@ -172,7 +177,7 @@ class Ui_Form(QtGui.QWidget):
         	elif os == 'Windows':
             		self.location = "C:\\"
         	else:
-            		self.location = ""
+            		self.location = os.getcwd()
 	
 	def openfile(self):
 		self.getLocation()
@@ -185,9 +190,42 @@ class Ui_Form(QtGui.QWidget):
 			ip = socket.gethostbyname(socket.getfqdn())
 		return ip
 
-	def initiate(self):
-		self.mserve = MyServerHttp()
+	def initiatehttp(self):
+		self.mservehttp = MyServerHttp()
 	
+	def initiateftp(self):
+		self.mserveftp = MyServerFtp()
+	
+	def startFtpSharing(self):
+		port = str(self.etPort.toPlainText())
+		nport = 0
+		try:
+                        nport = int(port)
+                except Exception:
+                        self.lPort.setStyleSheet('color : red')
+			return
+			pass
+		if self.flagf:
+			self.flagf = False
+			self.mserveftp.serverStop()
+			del self.mserveftp
+			self.initiateftp()
+			self.btnShare.setText("Start Sharing")
+			self.logs = "Sharing Stopped \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			return
+		self.flagf = True
+		self.lPort.setStyleSheet('color : black')
+		port = str(self.etPort.toPlainText())
+		self.location = str(self.etFolder.toPlainText())
+		self.mserveftp.serverStart(nport,self.location)
+		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+		self.etLogs.insertPlainText(self.logs)
+		if nport < 1025:
+			self.etLogs.insertPlainText("Use port greater than 1024 for proper working\n")
+		self.etLogs.moveCursor(QtGui.QTextCursor.End)
+		self.btnShare.setText("Stop Sharing")
 
 	def startHttpSharing(self):
 		port = str(self.etPort.toPlainText())
@@ -198,21 +236,21 @@ class Ui_Form(QtGui.QWidget):
                         self.lPort.setStyleSheet('color : red')
 			return
 			pass
-		if self.flag:
-			self.flag = False
-			self.mserve.serverStop()
-			del self.mserve
-			self.initiate()
+		if self.flagh:
+			self.flagh = False
+			self.mservehttp.serverStop()
+			del self.mservehttp
+			self.initiatehttp()
 			self.btnShare.setText("Start Sharing")
 			self.logs = "Sharing Stopped \n"
 			self.etLogs.insertPlainText(self.logs)
 			self.etLogs.moveCursor(QtGui.QTextCursor.End)
 			return
-		self.flag = True
+		self.flagh = True
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
 		self.location = str(self.etFolder.toPlainText())
-		self.mserve.serverStart(nport,self.location)
+		self.mservehttp.serverStart(nport,self.location)
 		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
 		self.etLogs.insertPlainText(self.logs)
 		if nport < 1025:
@@ -242,6 +280,34 @@ class MyServerHttp:
 		
 	def serverStop(self):
 		self.server.shutdown()
+
+class MyServerFtp:
+	def __init__(self):
+		self.port = 8080
+	def __exit__(self, *err	):
+        	self.close()
+	def serverStart(self,port,location):
+		self.authorizer = DummyAuthorizer()
+		#with r/w and read only
+		self.authorizer.add_user('user', '12345', '.', perm='elradfmwM')
+		self.authorizer.add_anonymous(location)
+
+		self.handler = FTPHandler
+		self.handler.authorizer = self.authorizer
+
+		self.handler.banner = "ftp Server ready"
+		self.address = ('', port)
+		self.server = FTPServer(self.address, self.handler)
+
+		self.server.max_cons = 256
+		self.server.max_cons_per_ip = 5
+		
+		thread = threading.Thread(target = self.server.serve_forever)
+		thread.deamon = True
+		thread.start()
+		#self.server.serve_forever()
+	def serverStop(self):
+		self.close()
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)

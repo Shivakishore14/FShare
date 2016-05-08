@@ -32,8 +32,8 @@ class Ui_Form(QtGui.QWidget):
 	def setupUi(self, Form):
 		Form.setObjectName(_fromUtf8("Fshare"))
 		Form.resize(651, 343)
+		self.flagh = False
 		self.flagf = False
-		self.flagf = True
 		self.horizontalLayout = QtGui.QHBoxLayout(Form)
 		self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
 		self.gridLayout = QtGui.QGridLayout()
@@ -101,12 +101,12 @@ class Ui_Form(QtGui.QWidget):
 		self.lShareChooser = QtGui.QLabel(Form)
 		self.lShareChooser.setObjectName(_fromUtf8("lShareChooser"))
 		self.horizontalLayoutSelect.addWidget(self.lShareChooser)
-		self.btnRadioHttp = QtGui.QRadioButton(Form)
-		self.btnRadioHttp.setObjectName(_fromUtf8("btnRadioHttp"))
-		self.horizontalLayoutSelect.addWidget(self.btnRadioHttp)
 		self.btnRadioFtp = QtGui.QRadioButton(Form)
 		self.btnRadioFtp.setObjectName(_fromUtf8("btnRadioFtp"))
 		self.horizontalLayoutSelect.addWidget(self.btnRadioFtp)
+		self.btnRadioHttp = QtGui.QRadioButton(Form)
+		self.btnRadioHttp.setObjectName(_fromUtf8("btnRadioHttp"))
+		self.horizontalLayoutSelect.addWidget(self.btnRadioHttp)
 		spacerItem4 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
 		self.horizontalLayoutSelect.addItem(spacerItem4)
 		self.gridLayout.addLayout(self.horizontalLayoutSelect, 10, 0, 1, 1)
@@ -159,16 +159,20 @@ class Ui_Form(QtGui.QWidget):
 		self.btnShare.setText(_translate("Form", "Start Sharing", None))
 		self.lTitle.setText(_translate("Form", "F Share V1.1", None))
 		self.lShareChooser.setText(_translate("Form", "Share over :", None))
-		self.btnRadioHttp.setText(_translate("Form", "Http", None))
 		self.btnRadioFtp.setText(_translate("Form", "FTP", None))
+		self.btnRadioHttp.setText(_translate("Form", "Http", None))
 		self.lPort_2.setText(_translate("Form", "Folder To Share : ", None))
 		self.btnOpenFile.setText(_translate("Form", "...", None))
 		self.btnOpenFile.clicked.connect(self.openfile)
-		self.btnShare.clicked.connect(self.startFtpSharing)
+		self.btnShare.clicked.connect(self.selectSharing)
 		self.initiatehttp()
 		self.initiateftp()
 		self.logs = ""
-		self.etPort.insertPlainText("8080")
+		self.location = ""
+		self.etPort.insertPlainText("2121")
+		self.getLocation()
+		self.etFolder.setText(self.location)
+		self.btnRadioFtp.setChecked(True)
 
 	def getLocation(self):
 		os = platform.system()
@@ -195,6 +199,14 @@ class Ui_Form(QtGui.QWidget):
 	
 	def initiateftp(self):
 		self.mserveftp = MyServerFtp()
+
+	def selectSharing(self):
+		if self.btnRadioFtp.isChecked() == True:
+			print "Ftp Server"
+			self.startFtpSharing()
+		else:
+			print "Http Server"
+			self.startHttpSharing()
 	
 	def startFtpSharing(self):
 		port = str(self.etPort.toPlainText())
@@ -208,7 +220,7 @@ class Ui_Form(QtGui.QWidget):
 		if self.flagf:
 			self.flagf = False
 			self.mserveftp.serverStop()
-			del self.mserveftp
+			del self.mserveftp			
 			self.initiateftp()
 			self.btnShare.setText("Start Sharing")
 			self.logs = "Sharing Stopped \n"
@@ -302,16 +314,16 @@ class MyServerFtp:
 		self.server.max_cons = 256
 		self.server.max_cons_per_ip = 5
 		
-		thread = threading.Thread(target = self.server.serve_forever)
-		thread.deamon = True
-		thread.start()
+		self.thread = threading.Thread(target = self.server.serve_forever)
+		self.thread.deamon = True
+		self.thread.start()
 		#self.server.serve_forever()
 	def serverStop(self):
-		self.close()
+		self.server.close_all()
 
 if __name__ == '__main__':
 	app = QtGui.QApplication(sys.argv)
-	ex = Ui_Form	()
+	ex = Ui_Form()
 	ex.show()
 	sys.exit(app.exec_())
 

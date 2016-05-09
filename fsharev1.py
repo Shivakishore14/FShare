@@ -1,4 +1,8 @@
 from PyQt4 import QtCore, QtGui
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.servers import FTPServer
 import sys
 import platform
 import socket
@@ -6,10 +10,6 @@ import SimpleHTTPServer
 import SocketServer
 import os
 import threading
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import FTPHandler
-from pyftpdlib.servers import FTPServer
 
 try:
 	_fromUtf8 = QtCore.QString.fromUtf8
@@ -116,10 +116,10 @@ class Ui_Form(QtGui.QWidget):
 		self.horizontalLayoutFolderShare.setSizeConstraint(QtGui.QLayout.SetFixedSize)
 		self.horizontalLayoutFolderShare.setSpacing(6)
 		self.horizontalLayoutFolderShare.setObjectName(_fromUtf8("horizontalLayoutFolderShare"))
-		self.lPort_2 = QtGui.QLabel(Form)
-		self.lPort_2.setMaximumSize(QtCore.QSize(16777215, 25))
-		self.lPort_2.setObjectName(_fromUtf8("label_2"))
-		self.horizontalLayoutFolderShare.addWidget(self.lPort_2)
+		self.lFolder = QtGui.QLabel(Form)
+		self.lFolder.setMaximumSize(QtCore.QSize(16777215, 25))
+		self.lFolder.setObjectName(_fromUtf8("label_2"))
+		self.horizontalLayoutFolderShare.addWidget(self.lFolder)
 		self.etFolder = QtGui.QTextEdit(Form)
 		self.etFolder.setMaximumSize(QtCore.QSize(16777215, 25))
 		self.etFolder.setObjectName(_fromUtf8("textEdit"))
@@ -161,7 +161,7 @@ class Ui_Form(QtGui.QWidget):
 		self.lShareChooser.setText(_translate("Form", "Share over :", None))
 		self.btnRadioFtp.setText(_translate("Form", "FTP", None))
 		self.btnRadioHttp.setText(_translate("Form", "Http", None))
-		self.lPort_2.setText(_translate("Form", "Folder To Share : ", None))
+		self.lFolder.setText(_translate("Form", "Folder To Share : ", None))
 		self.btnOpenFile.setText(_translate("Form", "...", None))
 		self.btnOpenFile.clicked.connect(self.openfile)
 		self.btnShare.clicked.connect(self.selectSharing)
@@ -184,9 +184,10 @@ class Ui_Form(QtGui.QWidget):
             		self.location = os.getcwd()
 	
 	def openfile(self):
+		self.lFolder.setStyleSheet('color : black')
 		self.getLocation()
-		location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', self.location , QtGui.QFileDialog.ShowDirsOnly))
-		self.etFolder.setText(location)
+		self.location = str(QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', self.location , QtGui.QFileDialog.ShowDirsOnly))
+		self.etFolder.setText(self.location)
 
 	def getIp(self):
 		ip = socket.gethostbyname(socket.gethostname())
@@ -201,22 +202,41 @@ class Ui_Form(QtGui.QWidget):
 		self.mserveftp = MyServerFtp()
 
 	def selectSharing(self):
-		if self.btnRadioFtp.isChecked() == True:
-			print "Ftp Server"
-			self.startFtpSharing()
-		else:
-			print "Http Server"
-			self.startHttpSharing()
-	
-	def startFtpSharing(self):
+		self.lFolder.setStyleSheet('color : black')
+		self.location = str(self.etFolder.toPlainText())
+		if not os.path.isdir(self.location):
+			self.logs = "Server not started check folder path \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			self.lFolder.setStyleSheet('color : red')
+			return
 		port = str(self.etPort.toPlainText())
-		nport = 0
+		self.nport = 0
 		try:
-                        nport = int(port)
+                        self.nport = int(port)
                 except Exception:
+			self.logs = "Server not started enter valid port \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
                         self.lPort.setStyleSheet('color : red')
 			return
 			pass
+		if self.flagf:
+			self.startFtpSharing()
+		elif self.flagh:
+			self.startHttpSharing()
+		elif self.btnRadioFtp.isChecked() == True:
+			self.logs = "Ftp Server username : user password : sk \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			self.startFtpSharing()
+		else:
+			self.logs = "Http Server \n"
+			self.etLogs.insertPlainText(self.logs)
+			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			self.startHttpSharing()
+	
+	def startFtpSharing(self):
 		if self.flagf:
 			self.flagf = False
 			self.mserveftp.serverStop()
@@ -230,8 +250,7 @@ class Ui_Form(QtGui.QWidget):
 		self.flagf = True
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
-		self.location = str(self.etFolder.toPlainText())
-		self.mserveftp.serverStart(nport,self.location)
+		self.mserveftp.serverStart(self.nport,self.location)
 		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
 		self.etLogs.insertPlainText(self.logs)
 		if nport < 1025:
@@ -240,14 +259,6 @@ class Ui_Form(QtGui.QWidget):
 		self.btnShare.setText("Stop Sharing")
 
 	def startHttpSharing(self):
-		port = str(self.etPort.toPlainText())
-		nport = 0
-		try:
-                        nport = int(port)
-                except Exception:
-                        self.lPort.setStyleSheet('color : red')
-			return
-			pass
 		if self.flagh:
 			self.flagh = False
 			self.mservehttp.serverStop()
@@ -300,9 +311,7 @@ class MyServerFtp:
         	self.close()
 	def serverStart(self,port,location):
 		self.authorizer = DummyAuthorizer()
-		#with r/w and read only
-		self.authorizer.add_user('user', '12345', '.', perm='elradfmwM')
-		self.authorizer.add_anonymous(location)
+		self.authorizer.add_user('user', 'sk', location , perm='elradfmwM')
 
 		self.handler = FTPHandler
 		self.handler.authorizer = self.authorizer
@@ -317,7 +326,6 @@ class MyServerFtp:
 		self.thread = threading.Thread(target = self.server.serve_forever)
 		self.thread.deamon = True
 		self.thread.start()
-		#self.server.serve_forever()
 	def serverStop(self):
 		self.server.close_all()
 

@@ -175,6 +175,13 @@ class Ui_Form(QtGui.QWidget):
 		self.getLocation()
 		self.etFolder.setText(self.location)
 		self.btnRadioFtp.setChecked(True)
+		
+	def disable(self,arg):
+		self.btnRadioFtp.setDisabled(arg)
+		self.btnRadioHttp.setDisabled(arg)
+		self.btnOpenFile.setDisabled(arg)
+		self.etPort.setDisabled(arg)
+		self.etFolder.setDisabled(arg)
 
 	def getLocation(self):
 		os = platform.system()
@@ -248,17 +255,19 @@ class Ui_Form(QtGui.QWidget):
 			self.logs = "Sharing Stopped \n"
 			self.etLogs.insertPlainText(self.logs)
 			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			self.disable(False)
 			return
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
 		self.mserveftp.serverStart(self.nport,self.location)
 		if not self.mserveftp.errorOccured():
 			self.flagf = True
-			self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+			self.logs = "Sharing location : "+ self.location +"\nSharing on : ftp://" + self.getIp() + ":"+ port +"\n"
 			self.etLogs.insertPlainText(self.logs)
-			tself.btnShare.setText("Stop Sharing")
+			self.btnShare.setText("Stop Sharing")
+			self.disable(True)
 		else:
-			self.logs = "Server port already in use try changin port number\n"
+			self.logs = "Server port already in use try changing port number\n"
 			self.etLogs.insertPlainText(self.logs)
 		self.etLogs.moveCursor(QtGui.QTextCursor.End)
 
@@ -272,6 +281,7 @@ class Ui_Form(QtGui.QWidget):
 			self.logs = "Sharing Stopped \n"
 			self.etLogs.insertPlainText(self.logs)
 			self.etLogs.moveCursor(QtGui.QTextCursor.End)
+			self.disable(False)
 			return
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
@@ -279,11 +289,12 @@ class Ui_Form(QtGui.QWidget):
 		self.mservehttp.serverStart(self.nport,self.location)
 		if not self.mservehttp.errorOccured():
 			self.flagh = True
-			self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+			self.logs = "Sharing location : "+ self.location +"\nSharing on : http://" + self.getIp() + ":"+ port +"\n"
 			self.etLogs.insertPlainText(self.logs)
 			self.btnShare.setText("Stop Sharing")
+			self.disable(True)
 		else:
-			self.logs = "Server port already in use try changin port number\n"
+			self.logs = "Server port already in use try changing port number\n"
 			self.etLogs.insertPlainText(self.logs)
 		self.etLogs.moveCursor(QtGui.QTextCursor.End)
 

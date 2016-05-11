@@ -28,6 +28,8 @@ except AttributeError:
 class Ui_Form(QtGui.QWidget):
 	def __init__(self):
 		QtGui.QWidget.__init__(self)
+		self.setWindowTitle("Fshare")
+		self.setWindowIcon(QtGui.QIcon('app.ico'))
 		self.setupUi(self)
 	def setupUi(self, Form):
 		Form.setObjectName(_fromUtf8("Fshare"))
@@ -247,16 +249,18 @@ class Ui_Form(QtGui.QWidget):
 			self.etLogs.insertPlainText(self.logs)
 			self.etLogs.moveCursor(QtGui.QTextCursor.End)
 			return
-		self.flagf = True
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
 		self.mserveftp.serverStart(self.nport,self.location)
-		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
-		self.etLogs.insertPlainText(self.logs)
-		if nport < 1025:
-			self.etLogs.insertPlainText("Use port greater than 1024 for proper working\n")
+		if not self.mserveftp.errorOccured():
+			self.flagf = True
+			self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+			self.etLogs.insertPlainText(self.logs)
+			tself.btnShare.setText("Stop Sharing")
+		else:
+			self.logs = "Server port already in use try changin port number\n"
+			self.etLogs.insertPlainText(self.logs)
 		self.etLogs.moveCursor(QtGui.QTextCursor.End)
-		self.btnShare.setText("Stop Sharing")
 
 	def startHttpSharing(self):
 		if self.flagh:
@@ -269,63 +273,85 @@ class Ui_Form(QtGui.QWidget):
 			self.etLogs.insertPlainText(self.logs)
 			self.etLogs.moveCursor(QtGui.QTextCursor.End)
 			return
-		self.flagh = True
 		self.lPort.setStyleSheet('color : black')
 		port = str(self.etPort.toPlainText())
 		self.location = str(self.etFolder.toPlainText())
-		self.mservehttp.serverStart(nport,self.location)
-		self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
-		self.etLogs.insertPlainText(self.logs)
-		if nport < 1025:
-			self.etLogs.insertPlainText("Use port greater than 1024 for proper working\n")
+		self.mservehttp.serverStart(self.nport,self.location)
+		if not self.mservehttp.errorOccured():
+			self.flagh = True
+			self.logs = "Sharing location : "+ self.location +"\nSharing on : " + self.getIp() + ":"+ port +"\n"
+			self.etLogs.insertPlainText(self.logs)
+			self.btnShare.setText("Stop Sharing")
+		else:
+			self.logs = "Server port already in use try changin port number\n"
+			self.etLogs.insertPlainText(self.logs)
 		self.etLogs.moveCursor(QtGui.QTextCursor.End)
-		self.btnShare.setText("Stop Sharing")
 
 class MyServerHttp:
 	def __init__(self):
+		self.error = False
 		self.port = 8080
 	def __exit__(self, *err	):
         	self.close()
 		
 	def serverStart(self,port, location):
-		self.port = port
-		self.location = location
-		class MyTCPServer(SocketServer.TCPServer):
-			def server_bind(self):
-				self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-				self.socket.bind(self.server_address)
-		self.Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-		self.server = MyTCPServer(("", self.port), self.Handler)
-		os.chdir(self.location)
-		thread = threading.Thread(target = self.server.serve_forever)
-		thread.deamon = True
-		thread.start()
+		try:
+			self.error = False
+			self.port = port
+			self.location = location
+			class MyTCPServer(SocketServer.TCPServer):
+				def server_bind(self):
+					self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+					self.socket.bind(self.server_address)
+			self.Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+			self.server = MyTCPServer(("", self.port), self.Handler)
+			os.chdir(self.location)
+			thread = threading.Thread(target = self.server.serve_forever)
+			thread.deamon = True
+			thread.start()
+		except socket.error:
+			self.error = True
+			pass
+
+	def errorOccured(self):
+		return self.error
 		
 	def serverStop(self):
 		self.server.shutdown()
 
 class MyServerFtp:
+	
 	def __init__(self):
-		self.port = 8080
+		self.error = False
+		self.port = 2121
 	def __exit__(self, *err	):
         	self.close()
 	def serverStart(self,port,location):
-		self.authorizer = DummyAuthorizer()
-		self.authorizer.add_user('user', 'sk', location , perm='elradfmwM')
+		try:
+			self.error = False
+			self.authorizer = DummyAuthorizer()
+			self.authorizer.add_user('user', 'sk', location , perm='elradfmwM')
 
-		self.handler = FTPHandler
-		self.handler.authorizer = self.authorizer
+			self.handler = FTPHandler
+			self.handler.authorizer = self.authorizer
 
-		self.handler.banner = "ftp Server ready"
-		self.address = ('', port)
-		self.server = FTPServer(self.address, self.handler)
+			self.handler.banner = "ftp Server ready"
+			self.address = ('', port)
+			self.server = FTPServer(self.address, self.handler)
+	
+			self.server.max_cons = 256
+			self.server.max_cons_per_ip = 5
+			
+			self.thread = threading.Thread(target = self.server.serve_forever)
+			self.thread.deamon = True
+			self.thread.start()
+		except socket.error:
+			self.error = True
+			pass
 
-		self.server.max_cons = 256
-		self.server.max_cons_per_ip = 5
-		
-		self.thread = threading.Thread(target = self.server.serve_forever)
-		self.thread.deamon = True
-		self.thread.start()
+	def errorOccured(self):
+		return self.error
+
 	def serverStop(self):
 		self.server.close_all()
 
